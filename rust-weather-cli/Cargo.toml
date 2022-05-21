@@ -11,3 +11,6 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = "0.11.10"
+crossterm = { version = "0.23.2", features = [ "serde" ] }
+tui = { version = "0.18.0", default-features = false, features = ['crossterm', 'serde'] }
+lazy_static = "1.4.0"

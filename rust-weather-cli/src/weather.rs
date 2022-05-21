@@ -40,7 +40,8 @@ pub async fn get_weather(lat: f64, lon: f64) -> Option<WeatherResponse> {
     let params = [
         ("lat", lat.to_string()),
         ("lon", lon.to_string()),
-        ("appId", String::from(API_KEY))
+        ("appId", String::from(API_KEY)),
+        ("units", String::from("metric"))
     ];
     let url = reqwest::Url::parse_with_params(
         API_URL,
