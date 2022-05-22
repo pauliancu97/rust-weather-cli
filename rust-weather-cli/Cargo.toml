@@ -14,3 +14,4 @@ reqwest = "0.11.10"
 crossterm = { version = "0.23.2", features = [ "serde" ] }
 tui = { version = "0.18.0", default-features = false, features = ['crossterm', 'serde'] }
 lazy_static = "1.4.0"
+clap = { version = "3.1.18", features = ["derive"] }

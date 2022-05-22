@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use std::error::Error;
 
 static API_KEY: &str = "517585c5e642399d7a0246eb89e34877";
 static API_URL: &str = "https://api.openweathermap.org/data/2.5/weather";
@@ -36,7 +37,7 @@ pub struct WeatherResponse {
     pub name: String
 }
 
-pub async fn get_weather(lat: f64, lon: f64) -> Option<WeatherResponse> {
+pub async fn get_weather(lat: f64, lon: f64) -> Result<WeatherResponse, Box<dyn Error>> {
     let params = [
         ("lat", lat.to_string()),
         ("lon", lon.to_string()),
@@ -46,10 +47,11 @@ pub async fn get_weather(lat: f64, lon: f64) -> Option<WeatherResponse> {
     let url = reqwest::Url::parse_with_params(
         API_URL,
         &params
-    ).ok()?;
+    )?;
     let raw_response = reqwest::get(url)
-        .await.ok()?
-        .text().await.ok()?;
-    let response: WeatherResponse = serde_json::from_str(&raw_response).ok()?;
-    Some(response)
+        .await?
+        .text()
+        .await?;
+    let response: WeatherResponse = serde_json::from_str(&raw_response)?;
+    Ok(response)
 }

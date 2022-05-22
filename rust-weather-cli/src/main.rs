@@ -4,6 +4,7 @@ mod weather;
 use std::error::Error;
 use std::io;
 use std::collections::HashMap;
+use clap::{Command, Arg};
 use crossterm::terminal::enable_raw_mode;
 use lazy_static::lazy_static;
 use tui::{Terminal, Frame};
@@ -14,7 +15,7 @@ use tui::text::{Spans, Span};
 use tui::widgets::{Block, Paragraph, Borders};
 use weather::WeatherResponse;
 
-use crate::location::get_coordinates;
+use crate::location::{get_coordinates, get_location_coordinates, Location};
 use crate::weather::get_weather;
 
 #[derive(Clone)]
@@ -28,10 +29,10 @@ struct WeatherMainStatsUi {
     icon: Vec<String>
 }
 
-async fn get_weather_current_location() -> Option<WeatherResponse> {
+async fn get_weather_current_location() -> Result<WeatherResponse, Box<dyn Error>> {
     let coordinates = get_coordinates().await?;
     let response = get_weather(coordinates.lat, coordinates.lon).await?;
-    Some(response)
+    Ok(response)
 }
 
 fn get_wind_direction(degree: f64) -> String {
@@ -241,12 +242,55 @@ fn ui<B: Backend>(rect: &mut Frame<B>, weather_response: &WeatherMainStatsUi) {
         rect.render_widget(paragraph, chunks[2]);
 }
 
+fn get_arguments() -> Location {
+    let matches = Command::new("rust-weather-cli")
+        .version("0.0.1")
+        .author("Iancu Paul")
+        .about("Simple Rust CLI tool for getting weather data")
+        .arg(
+            Arg::new("city")
+                .long("city")
+                .short('c')
+                .takes_value(true)
+                .value_name("CITY")
+                .help("City name for weather forecast")
+        )
+        .arg(
+            Arg::new("state")
+                .long("state")
+                .short('s')
+                .takes_value(true)
+                .value_name("STATE")
+                .help("State code for city, only US")
+        )
+        .arg(
+            Arg::new("country")
+                .long("country")
+                .short('r')
+                .takes_value(true)
+                .value_name("COUNTRY")
+                .help("Country code for city")
+        )
+        .get_matches();
+    if let Some(city_name) = matches.value_of("city") {
+        Location::City {
+            city: String::from(city_name),
+            state_code: matches.value_of("state").map(|string| String::from(string)),
+            country_code: matches.value_of("country").map(|string| String::from(string))
+        }
+    } else {
+        Location::Current
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let weather_response = get_weather_current_location().await.expect("could get weather for current location");
+    let location = get_arguments();
+    let coordinates = get_location_coordinates(&location).await?;
+    let weather_response = get_weather(coordinates.lat, coordinates.lon).await?;
     let weather_ui = get_weather_ui(&weather_response).expect("all weather data available");
     terminal.clear()?;
     terminal.draw(|rect| ui(rect, &weather_ui))?;
