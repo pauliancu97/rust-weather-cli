@@ -242,7 +242,7 @@ fn ui<B: Backend>(rect: &mut Frame<B>, weather_response: &WeatherMainStatsUi) {
         rect.render_widget(paragraph, chunks[2]);
 }
 
-fn get_arguments() -> Location {
+fn get_arguments() -> Result<Location, Box<dyn Error>> {
     let matches = Command::new("rust-weather-cli")
         .version("0.0.1")
         .author("Iancu Paul")
@@ -271,15 +271,32 @@ fn get_arguments() -> Location {
                 .value_name("COUNTRY")
                 .help("Country code for city")
         )
+        .arg(
+            Arg::new("coordinates")
+                .long("coordinates")
+                .short('l')
+                .takes_value(true)
+                .value_name("COORDINATES")
+                .help("Coordinates in latitude and longitude separated by comma (in degrees)")
+        )
         .get_matches();
     if let Some(city_name) = matches.value_of("city") {
-        Location::City {
+        Ok(Location::City {
             city: String::from(city_name),
             state_code: matches.value_of("state").map(|string| String::from(string)),
             country_code: matches.value_of("country").map(|string| String::from(string))
-        }
+        })
     } else {
-        Location::Current
+        if let Some(coordinates_string) = matches.value_of("coordinates") {
+            let mut split = coordinates_string.split(",");
+            let latitude_str = split.nth(0).ok_or("latitude not found")?;
+            let longitude_str = split.nth(0).ok_or("longitude not found")?;
+            let lat = latitude_str.parse::<f64>()?;
+            let lon = longitude_str.parse::<f64>()?;
+            Ok(Location::Coordinates { lat, lon })
+        } else {
+            Ok(Location::Current)
+        }
     }
 }
 
@@ -288,7 +305,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let location = get_arguments();
+    let location = get_arguments()?;
     let coordinates = get_location_coordinates(&location).await?;
     let weather_response = get_weather(coordinates.lat, coordinates.lon).await?;
     let weather_ui = get_weather_ui(&weather_response).expect("all weather data available");

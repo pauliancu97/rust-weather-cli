@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["--city", "London"],
+            "args": ["--coordinates", "42.9834,-81.233"],
             "cwd": "${workspaceFolder}"
         },
         {
